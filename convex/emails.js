@@ -16,7 +16,7 @@ export const sendTicketEmail = action({
   handler: async (ctx, args) => {
     const { attendeeEmail, attendeeName, eventTitle, eventDate, eventLocation, qrCode } = args;
 
-    // Use SMTP environment variables
+    // Use SMTP environment variable
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
