@@ -7,7 +7,7 @@ function generateQRCode() {
   return `EVT-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
 }
 
-// Register for an event
+// Register for an events
 export const registerForEvent = mutation({
   args: {
     eventId: v.id("events"),
