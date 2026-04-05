@@ -28,7 +28,7 @@ export default function UpgradeModal({ isOpen, onClose, trigger = "limit" }) {
           </DialogDescription>
         </DialogHeader>
 
-        {/* Pricing Cards */}
+        {/* Pricing Card */}
         <PricingTable
           checkoutProps={{
             appearance: {
