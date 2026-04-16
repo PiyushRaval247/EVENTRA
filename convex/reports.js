@@ -107,7 +107,17 @@ export const getMyTicketReport = query({
 export const getMyHistoryReport = query({
   handler: async (ctx) => {
     const user = await ctx.runQuery(internal.users.getCurrentUser);
-    if (!user) throw new Error("User not authenticated");
+    if (!user) {
+      return {
+        summary: {
+          totalRegistrations: 0,
+          upcomingCount: 0,
+          pastCount: 0,
+          cancelledCount: 0,
+        },
+        rows: [],
+      };
+    }
 
     const registrations = await ctx.db
       .query("registrations")
