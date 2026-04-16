@@ -1,6 +1,17 @@
-import { internal } from "./_generated/api";
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+
+// Helper: resolve current user from auth context
+async function resolveCurrentUser(ctx) {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) return null;
+  return await ctx.db
+    .query("users")
+    .withIndex("by_token", (q) =>
+      q.eq("tokenIdentifier", identity.tokenIdentifier)
+    )
+    .unique();
+}
 
 // Generate unique QR code ID
 function generateQRCode() {
@@ -15,7 +26,8 @@ export const registerForEvent = mutation({
     attendeeEmail: v.string(),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.runQuery(internal.users.getCurrentUser);
+    const user = await resolveCurrentUser(ctx);
+    if (!user) throw new Error("User not authenticated");
 
     const event = await ctx.db.get(args.eventId);
     if (!event) {
@@ -76,7 +88,7 @@ export const registerForEvent = mutation({
 export const checkRegistration = query({
   args: { eventId: v.id("events") },
   handler: async (ctx, args) => {
-    const user = await ctx.runQuery(internal.users.getCurrentUser);
+    const user = await resolveCurrentUser(ctx);
 
     if (!user) return null;
 
@@ -94,7 +106,8 @@ export const checkRegistration = query({
 // Get user's registrations (tickets)
 export const getMyRegistrations = query({
   handler: async (ctx) => {
-    const user = await ctx.runQuery(internal.users.getCurrentUser);
+    const user = await resolveCurrentUser(ctx);
+    if (!user) return [];
 
     const registrations = await ctx.db
       .query("registrations")
@@ -121,7 +134,8 @@ export const getMyRegistrations = query({
 export const cancelRegistration = mutation({
   args: { registrationId: v.id("registrations") },
   handler: async (ctx, args) => {
-    const user = await ctx.runQuery(internal.users.getCurrentUser);
+    const user = await resolveCurrentUser(ctx);
+    if (!user) throw new Error("User not authenticated");
 
     const registration = await ctx.db.get(args.registrationId);
     if (!registration) {
@@ -158,7 +172,8 @@ export const cancelRegistration = mutation({
 export const getEventRegistrations = query({
   args: { eventId: v.id("events") },
   handler: async (ctx, args) => {
-    const user = await ctx.runQuery(internal.users.getCurrentUser);
+    const user = await resolveCurrentUser(ctx);
+    if (!user) throw new Error("User not authenticated");
 
     const event = await ctx.db.get(args.eventId);
     if (!event) {
@@ -183,7 +198,8 @@ export const getEventRegistrations = query({
 export const checkInAttendee = mutation({
   args: { qrCode: v.string() },
   handler: async (ctx, args) => {
-    const user = await ctx.runQuery(internal.users.getCurrentUser);
+    const user = await resolveCurrentUser(ctx);
+    if (!user) throw new Error("User not authenticated");
 
     const registration = await ctx.db
       .query("registrations")

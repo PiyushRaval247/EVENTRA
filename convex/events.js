@@ -1,6 +1,17 @@
-import { internal } from "./_generated/api";
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+
+// Helper: resolve current user from auth context
+async function resolveCurrentUser(ctx) {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) return null;
+  return await ctx.db
+    .query("users")
+    .withIndex("by_token", (q) =>
+      q.eq("tokenIdentifier", identity.tokenIdentifier)
+    )
+    .unique();
+}
 
 // Create a new event
 export const createEvent = mutation({
@@ -33,7 +44,7 @@ export const createEvent = mutation({
       // DEBUG: Log args to see what's actually coming from the client
       console.log("createEvent called. Pro status:", hasPro);
 
-      const user = await ctx.runQuery(internal.users.getCurrentUser);
+      const user = await resolveCurrentUser(ctx);
       if (!user) {
         throw new Error("User not authenticated");
       }
@@ -116,7 +127,8 @@ export const getEventBySlug = query({
 // Get events by organizer
 export const getMyEvents = query({
   handler: async (ctx) => {
-    const user = await ctx.runQuery(internal.users.getCurrentUser);
+    const user = await resolveCurrentUser(ctx);
+    if (!user) return [];
 
     const events = await ctx.db
       .query("events")
@@ -132,7 +144,8 @@ export const getMyEvents = query({
 export const deleteEvent = mutation({
   args: { eventId: v.id("events") },
   handler: async (ctx, args) => {
-    const user = await ctx.runQuery(internal.users.getCurrentUser);
+    const user = await resolveCurrentUser(ctx);
+    if (!user) throw new Error("User not authenticated");
 
     const event = await ctx.db.get(args.eventId);
     if (!event) {

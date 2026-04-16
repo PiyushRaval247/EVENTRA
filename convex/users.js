@@ -89,7 +89,18 @@ export const completeOnboarding = mutation({
     interests: v.array(v.string()), // Min 3 categories
   },
   handler: async (ctx, args) => {
-    const user = await ctx.runQuery(internal.users.getCurrentUser);
+    // Get current authenticated user
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("User not authenticated");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q) =>
+        q.eq("tokenIdentifier", identity.tokenIdentifier)
+      )
+      .unique();
+
+    if (!user) throw new Error("User record not found");
 
     await ctx.db.patch(user._id, {
       location: args.location,
