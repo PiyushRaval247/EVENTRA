@@ -1,11 +1,15 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Plus, Loader2 } from "lucide-react";
+import { Plus, Loader2, Download, BarChart3 } from "lucide-react";
 import Link from "next/link";
 import { useConvexQuery, useConvexMutation } from "@/hooks/use-convex-query";
 import { api } from "@/convex/_generated/api";
 import { toast } from "sonner";
+import {
+  downloadOrganizerOverallReportCsv,
+  downloadOrganizerOverallReportPdf,
+} from "@/lib/report-downloads";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -16,6 +20,7 @@ export default function MyEventsPage() {
   const router = useRouter();
 
   const { data: events, isLoading } = useConvexQuery(api.events.getMyEvents);
+  const { data: overallReport, isLoading: loadingOverall } = useConvexQuery(api.reports.getOrganizerOverallReport);
   const { mutate: deleteEvent } = useConvexMutation(api.events.deleteEvent);
 
   const handleDelete = async (eventId) => {
@@ -38,6 +43,24 @@ export default function MyEventsPage() {
     router.push(`/my-events/${eventId}`);
   };
 
+  const handleDownloadOverallCsv = () => {
+    if (!overallReport || overallReport.eventStats.length === 0) {
+      toast.error("No data available to export");
+      return;
+    }
+    downloadOrganizerOverallReportCsv(overallReport);
+    toast.success("Global CSV report downloaded");
+  };
+
+  const handleDownloadOverallPdf = () => {
+    if (!overallReport || overallReport.eventStats.length === 0) {
+      toast.error("No data available to export");
+      return;
+    }
+    downloadOrganizerOverallReportPdf(overallReport);
+    toast.success("Global PDF report downloaded");
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -53,6 +76,32 @@ export default function MyEventsPage() {
           <div>
             <h1 className="text-4xl font-bold mb-2">My Events</h1>
             <p className="text-muted-foreground">Manage your created events</p>
+          </div>
+          
+          <div className="flex gap-2 items-center">
+            <span className="text-sm font-medium text-muted-foreground hidden sm:inline-block mr-2 flex items-center gap-1">
+              <BarChart3 className="w-4 h-4" /> Reports:
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDownloadOverallCsv}
+              disabled={loadingOverall || !events?.length}
+              className="gap-2"
+            >
+              <Download className="w-4 h-4" />
+              CSV
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDownloadOverallPdf}
+              disabled={loadingOverall || !events?.length}
+              className="gap-2"
+            >
+              <Download className="w-4 h-4" />
+              PDF
+            </Button>
           </div>
         </div>
 

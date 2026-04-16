@@ -172,3 +172,72 @@ export const getMyHistoryReport = query({
     };
   },
 });
+
+export const getOrganizerOverallReport = query({
+  handler: async (ctx) => {
+    const user = await resolveCurrentUser(ctx);
+    if (!user) {
+      return {
+        summary: {
+          totalEvents: 0,
+          totalRegistrations: 0,
+          totalRevenue: 0,
+          avgCheckInRate: 0,
+        },
+        eventStats: [],
+      };
+    }
+
+    const events = await ctx.db
+      .query("events")
+      .withIndex("by_organizer", (q) => q.eq("organizerId", user._id))
+      .collect();
+
+    let totalRegistrations = 0;
+    let totalRevenue = 0;
+    let totalCheckInRate = 0;
+    const now = Date.now();
+
+    const eventStats = await Promise.all(
+      events.map(async (event) => {
+        const registrations = await ctx.db
+          .query("registrations")
+          .withIndex("by_event", (q) => q.eq("eventId", event._id))
+          .collect();
+
+        const confirmed = registrations.filter((r) => r.status === "confirmed");
+        const checkedInCount = confirmed.filter((r) => r.checkedIn).length;
+        const regCount = confirmed.length;
+        const checkInRate = regCount > 0 ? Math.round((checkedInCount / regCount) * 100) : 0;
+        const revenue = event.ticketType === "paid" && event.ticketPrice ? checkedInCount * event.ticketPrice : 0;
+
+        totalRegistrations += regCount;
+        totalRevenue += revenue;
+        totalCheckInRate += checkInRate;
+
+        return {
+          eventId: event._id,
+          title: event.title,
+          startDate: event.startDate,
+          status: event.endDate < now ? "past" : (event.startDate <= now ? "ongoing" : "upcoming"),
+          registrations: regCount,
+          checkedIn: checkedInCount,
+          checkInRate,
+          revenue,
+          capacity: event.capacity,
+        };
+      })
+    );
+
+    return {
+      summary: {
+        totalEvents: events.length,
+        totalRegistrations,
+        totalRevenue,
+        avgCheckInRate: events.length > 0 ? Math.round(totalCheckInRate / events.length) : 0,
+      },
+      eventStats: eventStats.sort((a, b) => b.startDate - a.startDate),
+    };
+  },
+});
+

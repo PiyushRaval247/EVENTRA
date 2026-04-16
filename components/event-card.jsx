@@ -1,12 +1,24 @@
 "use client";
 
-import { Calendar, MapPin, Users, Trash2, X, QrCode, Eye } from "lucide-react";
+import { Calendar, MapPin, Users, Trash2, X, QrCode, Eye, Download, FileJson, FileText, MoreVertical } from "lucide-react";
 import { format } from "date-fns";
 import Image from "next/image";
 import { getCategoryIcon, getCategoryLabel } from "@/lib/data";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { useConvexQuery } from "@/hooks/use-convex-query";
+import { api } from "@/convex/_generated/api";
+import {
+  downloadOrganizerReportCsv,
+  downloadOrganizerReportPdf,
+} from "@/lib/report-downloads";
+import { toast } from "sonner";
 
 export default function EventCard({
   event,
@@ -70,7 +82,7 @@ export default function EventCard({
   // Grid variant (default - original design)
   return (
     <Card
-      className={`overflow-hidden group pt-0 ${onClick ? "cursor-pointer hover:shadow-lg transition-all hover:border-purple-500/50" : ""} ${className}`}
+      className={`overflow-hidden group pt-0 flex flex-col ${onClick ? "cursor-pointer hover:shadow-lg transition-all hover:border-purple-500/50" : ""} ${className}`}
       onClick={onClick}
     >
       <div className="relative h-48 overflow-hidden">
@@ -91,15 +103,18 @@ export default function EventCard({
             {getCategoryIcon(event.category)}
           </div>
         )}
-        <div className="absolute top-3 right-3">
-          <Badge variant="secondary">
+        <div className="absolute top-3 right-3 flex gap-1">
+          {action === "event" && (
+            <DownloadPopover eventId={event._id} />
+          )}
+          <Badge variant="secondary" className="backdrop-blur-md bg-white/80 dark:bg-black/80">
             {event.ticketType === "free" ? "Free" : "Paid"}
           </Badge>
         </div>
       </div>
 
-      <CardContent className="space-y-3">
-        <div>
+      <CardContent className="space-y-3 flex-1 flex flex-col justify-between">
+        <div className="space-y-3">
           <Badge variant="outline" className="mb-2">
             {getCategoryIcon(event.category)} {getCategoryLabel(event.category)}
           </Badge>
@@ -178,3 +193,73 @@ export default function EventCard({
     </Card>
   );
 }
+
+function DownloadPopover({ eventId }) {
+  const { data: report, isLoading } = useConvexQuery(
+    api.reports.getOrganizerEventReport,
+    { eventId }
+  );
+
+  const handleDownload = (type) => {
+    if (!report) {
+      toast.error("Report data is still loading...");
+      return;
+    }
+    if (report.attendees.length === 0) {
+      toast.error("No registrations to export");
+      return;
+    }
+
+    if (type === "csv") {
+      downloadOrganizerReportCsv(report);
+      toast.success("CSV report downloaded");
+    } else {
+      downloadOrganizerReportPdf(report);
+      toast.success("PDF report downloaded");
+    }
+  };
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          variant="secondary"
+          size="icon"
+          className="h-6 w-6 rounded-full backdrop-blur-md bg-white/80 dark:bg-black/80 shadow-sm hover:bg-white dark:hover:bg-black"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <MoreVertical className="w-3 h-3" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-40 p-1"
+        onClick={(e) => e.stopPropagation()}
+        align="end"
+      >
+        <div className="grid gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="justify-start gap-2 h-8 text-xs"
+            onClick={() => handleDownload("csv")}
+            disabled={isLoading}
+          >
+            <FileJson className="w-3 h-3" />
+            Download CSV
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="justify-start gap-2 h-8 text-xs"
+            onClick={() => handleDownload("pdf")}
+            disabled={isLoading}
+          >
+            <FileText className="w-3 h-3" />
+            Download PDF
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
