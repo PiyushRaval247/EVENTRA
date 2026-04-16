@@ -4,11 +4,17 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
-import { Calendar, MapPin, Loader2, Ticket } from "lucide-react";
+import { Calendar, Download, MapPin, Loader2, Ticket } from "lucide-react";
 import { useConvexQuery, useConvexMutation } from "@/hooks/use-convex-query";
 import { api } from "@/convex/_generated/api";
 import { toast } from "sonner";
 import QRCode from "react-qr-code";
+import {
+  downloadHistoryReportCsv,
+  downloadHistoryReportPdf,
+  downloadTicketReportCsv,
+  downloadTicketReportPdf,
+} from "@/lib/report-downloads";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -29,6 +35,9 @@ export default function MyTicketsPage() {
   const { data: registrations, isLoading } = useConvexQuery(
     api.registrations.getMyRegistrations
   );
+  const { data: historyReport, isLoading: loadingHistoryReport } = useConvexQuery(
+    api.reports.getMyHistoryReport
+  );
 
   const { mutate: cancelRegistration, isLoading: isCancelling } =
     useConvexMutation(api.registrations.cancelRegistration);
@@ -42,6 +51,64 @@ export default function MyTicketsPage() {
       toast.success("Registration cancelled successfully.");
     } catch (error) {
       toast.error(error.message || "Failed to cancel registration");
+    }
+  };
+
+  const handleDownloadHistoryCsv = () => {
+    if (!historyReport?.rows?.length) {
+      toast.error("No registration history found");
+      return;
+    }
+    downloadHistoryReportCsv(historyReport);
+    toast.success("History CSV downloaded");
+  };
+
+  const handleDownloadHistoryPdf = () => {
+    if (!historyReport?.rows?.length) {
+      toast.error("No registration history found");
+      return;
+    }
+    downloadHistoryReportPdf(historyReport);
+    toast.success("History PDF downloaded");
+  };
+
+  const handleDownloadTicket = async (registrationId, formatType) => {
+    try {
+      const selectedRegistration = registrations?.find(
+        (reg) => reg._id === registrationId
+      );
+      if (!selectedRegistration?.event) {
+        throw new Error("Ticket details not found");
+      }
+      const report = {
+        registrationId: selectedRegistration._id,
+        attendeeName: selectedRegistration.attendeeName,
+        attendeeEmail: selectedRegistration.attendeeEmail,
+        status: selectedRegistration.status,
+        checkedIn: selectedRegistration.checkedIn,
+        checkedInAt: selectedRegistration.checkedInAt || null,
+        registeredAt: selectedRegistration.registeredAt,
+        qrCode: selectedRegistration.qrCode,
+        event: {
+          ...selectedRegistration.event,
+          location:
+            selectedRegistration.event.locationType === "online"
+              ? "Online"
+              : `${selectedRegistration.event.city}, ${
+                  selectedRegistration.event.state ||
+                  selectedRegistration.event.country
+                }`,
+        },
+      };
+      if (formatType === "csv") {
+        downloadTicketReportCsv(report);
+        toast.success("Ticket CSV downloaded");
+      } else {
+        downloadTicketReportPdf(report);
+        toast.success("Ticket PDF downloaded");
+      }
+    } catch (error) {
+      toast.error(error.message || "Failed to download ticket report");
     }
   };
 
@@ -72,6 +139,24 @@ export default function MyTicketsPage() {
           <p className="text-muted-foreground">
             View and manage your event registrations
           </p>
+          <div className="flex gap-2 mt-4">
+            <Button
+              variant="outline"
+              onClick={handleDownloadHistoryCsv}
+              disabled={loadingHistoryReport}
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Download History CSV
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleDownloadHistoryPdf}
+              disabled={loadingHistoryReport}
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Download History PDF
+            </Button>
+          </div>
         </div>
 
         {/* Upcoming Tickets */}
@@ -185,6 +270,22 @@ export default function MyTicketsPage() {
               <p className="text-xs text-muted-foreground text-center">
                 Show this QR code at the event entrance for check-in
               </p>
+              <div className="flex justify-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => handleDownloadTicket(selectedTicket._id, "csv")}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  CSV
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => handleDownloadTicket(selectedTicket._id, "pdf")}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  PDF
+                </Button>
+              </div>
             </div>
           </DialogContent>
         </Dialog>

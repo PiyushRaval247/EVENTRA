@@ -23,6 +23,10 @@ import {
 import { useConvexQuery, useConvexMutation } from "@/hooks/use-convex-query";
 import { api } from "@/convex/_generated/api";
 import { toast } from "sonner";
+import {
+  downloadOrganizerReportCsv,
+  downloadOrganizerReportPdf,
+} from "@/lib/report-downloads";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -53,6 +57,10 @@ export default function EventDashboardPage() {
   // Fetch registrations
   const { data: registrations, isLoading: loadingRegistrations } =
     useConvexQuery(api.registrations.getEventRegistrations, { eventId });
+  const { data: organizerReport } = useConvexQuery(
+    api.reports.getOrganizerEventReport,
+    { eventId }
+  );
 
   // Delete event mutation
   const { mutate: deleteEvent, isLoading: isDeleting } = useConvexMutation(
@@ -76,39 +84,21 @@ export default function EventDashboardPage() {
   };
 
   const handleExportCSV = () => {
-    if (!registrations || registrations.length === 0) {
+    if (!organizerReport || organizerReport.attendees.length === 0) {
       toast.error("No registrations to export");
       return;
     }
-
-    const csvContent = [
-      [
-        "Name",
-        "Email",
-        "Registered At",
-        "Checked In",
-        "Checked In At",
-        "QR Code",
-      ],
-      ...registrations.map((reg) => [
-        reg.attendeeName,
-        reg.attendeeEmail,
-        new Date(reg.registeredAt).toLocaleString(),
-        reg.checkedIn ? "Yes" : "No",
-        reg.checkedInAt ? new Date(reg.checkedInAt).toLocaleString() : "-",
-        reg.qrCode,
-      ]),
-    ]
-      .map((row) => row.join(","))
-      .join("\n");
-
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${dashboardData?.event.title || "event"}_registrations.csv`;
-    a.click();
+    downloadOrganizerReportCsv(organizerReport);
     toast.success("CSV exported successfully");
+  };
+
+  const handleExportPDF = () => {
+    if (!organizerReport || organizerReport.attendees.length === 0) {
+      toast.error("No registrations to export");
+      return;
+    }
+    downloadOrganizerReportPdf(organizerReport);
+    toast.success("PDF exported successfully");
   };
 
   if (isLoading || loadingRegistrations) {
@@ -331,13 +321,13 @@ export default function EventDashboardPage() {
                 className="pl-10"
               />
             </div>
-            <Button
-              variant="outline"
-              onClick={handleExportCSV}
-              className="gap-2"
-            >
+            <Button variant="outline" onClick={handleExportCSV} className="gap-2">
               <Download className="w-4 h-4" />
-              Export CSV
+              CSV
+            </Button>
+            <Button variant="outline" onClick={handleExportPDF} className="gap-2">
+              <Download className="w-4 h-4" />
+              PDF
             </Button>
           </div>
 
