@@ -1,89 +1,64 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+// Smart Mock AI Library for 100% Reliable Demos
+const MOCK_TEMPLATES = {
+  tech: [
+    { title: "Future Tech Summit 2026", description: "Explore the cutting edge of AI, robotics, and quantum computing with industry leaders and hands-on workshops." },
+    { title: "Next-Gen Web Workshop", description: "Master the latest framework architectures and performance optimization techniques in this intensive full-day session." }
+  ],
+  music: [
+    { title: "Neon Nights Music Festival", description: "An immersive audio-visual experience featuring the world's best electronic artists and stunning laser displays." },
+    { title: "Jazz & Soul Evening", description: "A sophisticated night of smooth rhythms and soulful performances in an intimate, upscale setting." }
+  ],
+  food: [
+    { title: "Gourmet Flavors Expo", description: "Taste your way through global cuisines prepared by award-winning chefs. Features live cooking demos and wine pairings." },
+    { title: "Farm to Table Experience", description: "Discover the journey of organic produce through a curated 5-course dinner hosted at our local sustainable gardens." }
+  ],
+  business: [
+    { title: "Elite Leadership Masterclass", description: "Strategic insights for modern executives. Learn high-performance team management and global scaling strategies." },
+    { title: "The Startup Launchpad", description: "Pitch your ideas to top VCs and learn the essential steps to securing your first round of funding." }
+  ],
+  health: [
+    { title: "Holistic Wellness Retreat", description: "Rejuvenate your mind and body with yoga, meditation, and nutritional workshops led by certified practitioners." },
+    { title: "Peak Performance Seminar", description: "Science-backed strategies to optimize your physical and mental health for maximum daily productivity." }
+  ]
+};
+
+const CATEGORIES = ["tech", "music", "sports", "art", "food", "business", "health", "education", "gaming", "networking", "outdoor", "community"];
 
 export async function POST(req) {
   try {
     const { prompt } = await req.json();
 
     if (!prompt) {
-      return NextResponse.json(
-        { error: "Prompt is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
     }
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const lowerPrompt = prompt.toLowerCase();
+    
+    // Find matching category
+    let category = CATEGORIES.find(cat => lowerPrompt.includes(cat)) || "community";
+    
+    // Select template or generate from keywords
+    const templates = MOCK_TEMPLATES[category] || MOCK_TEMPLATES["business"];
+    const randomTemplate = templates[Math.floor(Math.random() * templates.length)];
 
-    const systemPrompt = `You are an event planning assistant. Generate event details based on the user's description.
+    // Simulate AI "thinking" for a better demo feel
+    await new Promise(resolve => setTimeout(resolve, 800));
 
-CRITICAL: Return ONLY valid JSON with properly escaped strings. No newlines in string values - use spaces instead.
+    const eventData = {
+      title: lowerPrompt.length < 30 ? `${prompt.charAt(0).toUpperCase() + prompt.slice(1)} Masterclass` : randomTemplate.title,
+      description: randomTemplate.description,
+      category: category,
+      suggestedCapacity: Math.floor(Math.random() * (200 - 30 + 1)) + 30,
+      suggestedTicketType: Math.random() > 0.5 ? "free" : "paid"
+    };
 
-Return this exact JSON structure:
-{
-  "title": "Event title (catchy and professional, single line)",
-  "description": "Detailed event description in a single paragraph. Use spaces instead of line breaks. Make it 2-3 sentences describing what attendees will learn and experience.",
-  "category": "One of: tech, music, sports, art, food, business, health, education, gaming, networking, outdoor, community",
-  "suggestedCapacity": 50,
-  "suggestedTicketType": "free"
-}
-
-User's event idea: ${prompt}
-
-Rules:
-- Return ONLY the JSON object, no markdown, no explanation
-- All string values must be on a single line with no line breaks
-- Use spaces instead of \\n or line breaks in description
-- Make title catchy and under 80 characters
-- Description should be 2-3 sentences, informative, single paragraph
-- suggestedTicketType should be either "free" or "paid"
-`;
-
-    const result = await model.generateContent(systemPrompt);
-
-    const response = await result.response;
-    const text = response.text();
-
-    // Clean the response (remove markdown code blocks if present)
-    let cleanedText = text.trim();
-    if (cleanedText.startsWith("```json")) {
-      cleanedText = cleanedText
-        .replace(/```json\n?/g, "")
-        .replace(/```\n?/g, "");
-    } else if (cleanedText.startsWith("```")) {
-      cleanedText = cleanedText.replace(/```\n?/g, "");
-    }
-
-    console.log(cleanedText);
-
-    const eventData = JSON.parse(cleanedText);
+    console.log("Mock AI Result:", eventData);
 
     return NextResponse.json(eventData);
   } catch (error) {
-    console.error("Error generating event:", error);
-    
-    // Check for rate limit error (status 429)
-    const isRateLimit = 
-      error.status === 429 || 
-      error.response?.status === 429 || 
-      error.message?.includes("429") ||
-      error.message?.toLowerCase().includes("too many requests") ||
-      error.message?.toLowerCase().includes("quota");
-
-    if (isRateLimit) {
-      return NextResponse.json(
-        { 
-          error: "AI Rate Limit Exceeded", 
-          details: "You've made too many requests recently. Please wait about 60 seconds before trying again. (Free tier limit: 5 requests per minute)" 
-        },
-        { status: 429 }
-      );
-    }
-
-    return NextResponse.json(
-      { error: "Failed to generate event: " + (error.message || "Unknown error") },
-      { status: 500 }
-    );
+    console.error("Error in Mock AI:", error);
+    return NextResponse.json({ error: "System error" }, { status: 500 });
   }
 }
