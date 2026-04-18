@@ -14,7 +14,7 @@ export async function POST(req) {
       );
     }
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     const systemPrompt = `You are an event planning assistant. Generate event details based on the user's description.
 
