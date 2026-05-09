@@ -66,7 +66,50 @@ export default defineSchema({
 
     // Customization
     coverImage: v.optional(v.string()),
+    images: v.optional(v.array(v.string())), // Multiple gallery images
+    sponsors: v.optional(
+      v.array(
+        v.object({
+          name: v.string(),
+          logo: v.string(),
+          link: v.optional(v.string()),
+          tier: v.string(), // e.g. Gold, Silver, Bronze
+        })
+      )
+    ),
+    swagBag: v.optional(
+      v.array(
+        v.object({
+          title: v.string(),
+          url: v.string(),
+          type: v.union(v.literal("link"), v.literal("file"), v.literal("code")),
+          description: v.optional(v.string()),
+        })
+      )
+    ),
     themeColor: v.optional(v.string()),
+
+    // Multi-tier Ticketing & Promo Codes
+    ticketTiers: v.optional(
+      v.array(
+        v.object({
+          name: v.string(),
+          price: v.number(),
+          capacity: v.number(),
+          registrationCount: v.number(),
+        })
+      )
+    ),
+    promoCodes: v.optional(
+      v.array(
+        v.object({
+          code: v.string(),
+          discountType: v.union(v.literal("percentage"), v.literal("fixed")),
+          discountValue: v.number(),
+          expiresAt: v.optional(v.number()),
+        })
+      )
+    ),
 
     // Timestamps
     createdAt: v.number(),
@@ -87,6 +130,11 @@ export default defineSchema({
     attendeeName: v.string(),
     attendeeEmail: v.string(),
 
+    // Tier info
+    tierName: v.optional(v.string()), // For multi-tier events
+    pricePaid: v.optional(v.number()),
+    promoCodeUsed: v.optional(v.string()),
+
     // QR Code for entry
     qrCode: v.string(), // Unique ID for QR
 
@@ -103,4 +151,29 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_event_user", ["eventId", "userId"])
     .index("by_qr_code", ["qrCode"]),
+
+  // Staff table
+  staff: defineTable({
+    eventId: v.id("events"),
+    email: v.string(), // We use email to invite, then match with user.email
+    role: v.union(v.literal("admin"), v.literal("scanner")),
+    addedAt: v.number(),
+  })
+    .index("by_event", ["eventId"])
+    .index("by_email", ["email"])
+    .index("by_event_email", ["eventId", "email"]),
+
+  // Feedback table
+  feedback: defineTable({
+    eventId: v.id("events"),
+    userId: v.id("users"),
+    userName: v.string(),
+    userImage: v.optional(v.string()),
+    rating: v.number(), // 1-5
+    comment: v.string(),
+    createdAt: v.number(),
+  })
+    .index("by_event", ["eventId"])
+    .index("by_user", ["userId"])
+    .index("by_event_user", ["eventId", "userId"]),
 });

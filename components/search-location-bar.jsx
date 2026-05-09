@@ -20,6 +20,7 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 
 export default function SearchLocationBar() {
   const router = useRouter();
@@ -179,28 +180,21 @@ export default function SearchLocationBar() {
       </div>
 
       {/* State Select */}
-      <Select
+      <SearchableSelect
         value={selectedState}
         onValueChange={(value) => {
           setSelectedState(value);
           setSelectedCity("");
         }}
-      >
-        <SelectTrigger className="w-32 h-9 border-l-0 rounded-none">
-          <SelectValue placeholder="State" />
-        </SelectTrigger>
-        <SelectContent>
-          {/* <SelectItem value="">State</SelectItem> */}
-          {indianStates.map((state) => (
-            <SelectItem key={state.isoCode} value={state.name}>
-              {state.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        placeholder="State"
+        searchPlaceholder="Search State..."
+        options={indianStates.map(s => ({ label: s.name, value: s.name }))}
+        className="w-32 h-9 border-l-0 rounded-none bg-transparent px-3 text-sm border-y border-r border-purple-500/20 shadow-none"
+        contentClassName="w-[200px]"
+      />
 
       {/* City Select */}
-      <Select
+      <SearchableSelect
         value={selectedCity}
         onValueChange={(value) => {
           setSelectedCity(value);
@@ -208,20 +202,13 @@ export default function SearchLocationBar() {
             handleLocationSelect(value, selectedState);
           }
         }}
+        placeholder="City"
+        searchPlaceholder="Search City..."
         disabled={!selectedState}
-      >
-        <SelectTrigger className="w-32 h-9 rounded-none rounded-r-md ">
-          <SelectValue placeholder="City" />
-        </SelectTrigger>
-        <SelectContent>
-          {/* <SelectItem value="">City</SelectItem> */}
-          {cities.map((city) => (
-            <SelectItem key={city.name} value={city.name}>
-              {city.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        options={cities.map(c => ({ label: c.name, value: c.name }))}
+        className="w-32 h-9 rounded-none rounded-r-md bg-transparent px-3 text-sm border-y border-r border-purple-500/20 shadow-none"
+        contentClassName="w-[200px]"
+      />
     </div>
   );
 }

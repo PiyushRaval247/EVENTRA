@@ -29,7 +29,17 @@ export const getEventDashboard = query({
     }
 
     // Check if user is the organizer
-    if (event.organizerId !== user._id) {
+    const isOwner = event.organizerId === user._id;
+
+    // Check if user is staff
+    const staffMember = await ctx.db
+      .query("staff")
+      .withIndex("by_event_email", (q) =>
+        q.eq("eventId", args.eventId).eq("email", user.email)
+      )
+      .unique();
+
+    if (!isOwner && !staffMember) {
       throw new Error("You are not authorized to view this dashboard");
     }
 
@@ -76,6 +86,7 @@ export const getEventDashboard = query({
 
     return {
       event,
+      isOwner,
       stats: {
         totalRegistrations,
         checkedInCount,

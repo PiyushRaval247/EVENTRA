@@ -57,7 +57,7 @@ export default function EventCard({
 
           {/* Event Details */}
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-sm mb-1 group-hover:text-purple-400 transition-colors line-clamp-2">
+            <h3 className="font-bold text-base mb-1 group-hover:text-purple-600 transition-colors line-clamp-2 capitalize text-gray-900">
               {event.title}
             </h3>
             <p className="text-xs text-muted-foreground mb-1">
@@ -107,7 +107,7 @@ export default function EventCard({
           {action === "event" && (
             <DownloadPopover eventId={event._id} />
           )}
-          <Badge variant="secondary" className="backdrop-blur-md bg-white/80 dark:bg-black/80">
+          <Badge variant="secondary" className="backdrop-blur-xl bg-white/95 border border-purple-500/20 text-purple-700 shadow-sm font-bold px-3 py-1">
             {event.ticketType === "free" ? "Free" : "Paid"}
           </Badge>
         </div>
@@ -115,30 +115,30 @@ export default function EventCard({
 
       <CardContent className="space-y-3 flex-1 flex flex-col justify-between">
         <div className="space-y-3">
-          <Badge variant="outline" className="mb-2">
+          <Badge variant="secondary" className="mb-2 bg-purple-50 text-purple-600 border-purple-100">
             {getCategoryIcon(event.category)} {getCategoryLabel(event.category)}
           </Badge>
-          <h3 className="font-semibold text-lg line-clamp-2 group-hover:text-purple-400 transition-colors">
+          <h3 className="font-extrabold text-xl tracking-tight line-clamp-2 group-hover:text-purple-600 transition-colors capitalize text-gray-900">
             {event.title}
           </h3>
         </div>
 
         <div className="space-y-2 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4" />
-            <span>{format(event.startDate, "PPP")}</span>
+            <Calendar className="w-4 h-4 text-purple-500" />
+            <span className="font-medium text-gray-700">{format(event.startDate, "PPP")}</span>
           </div>
           <div className="flex items-center gap-2">
-            <MapPin className="w-4 h-4" />
-            <span className="line-clamp-1">
+            <MapPin className="w-4 h-4 text-purple-500" />
+            <span className="line-clamp-1 font-medium text-gray-700">
               {event.locationType === "online"
                 ? "Online Event"
                 : `${event.city}, ${event.state || event.country}`}
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <Users className="w-4 h-4" />
-            <span>
+            <Users className="w-4 h-4 text-purple-500" />
+            <span className="font-medium text-gray-700">
               {event.registrationCount} / {event.capacity} registered
             </span>
           </div>
@@ -225,7 +225,7 @@ function DownloadPopover({ eventId }) {
         <Button
           variant="secondary"
           size="icon"
-          className="h-6 w-6 rounded-full backdrop-blur-md bg-white/80 dark:bg-black/80 shadow-sm hover:bg-white dark:hover:bg-black"
+          className="h-6 w-6 rounded-full backdrop-blur-md bg-white/90 shadow-sm hover:bg-white"
           onClick={(e) => e.stopPropagation()}
         >
           <MoreVertical className="w-3 h-3" />

@@ -13,6 +13,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import EventCard from "@/components/event-card";
 import { AnimatedList, AnimatedItem } from "@/components/animated-list";
 
@@ -111,7 +112,7 @@ export default function MyEventsPage() {
               <div className="text-6xl mb-4">📅</div>
               <h2 className="text-2xl font-bold">No events yet</h2>
               <p className="text-muted-foreground">
-                Create your first event and start managing attendees
+                Create your first event or get invited as staff to start managing
               </p>
               <Button asChild className="gap-2">
                 <Link href="/create-event">
@@ -122,18 +123,50 @@ export default function MyEventsPage() {
             </div>
           </Card>
         ) : (
-          <AnimatedList className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {events?.map((event) => (
-              <AnimatedItem key={event._id}>
-                <EventCard
-                  event={event}
-                  action="event"
-                  onClick={() => handleEventClick(event._id)}
-                  onDelete={handleDelete}
-                />
-              </AnimatedItem>
-            ))}
-          </AnimatedList>
+          <div className="space-y-12">
+            {/* Organized Events */}
+            {events.some(e => e.isOwner) && (
+              <section>
+                <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+                  Organized by Me
+                  <Badge variant="secondary">{events.filter(e => e.isOwner).length}</Badge>
+                </h2>
+                <AnimatedList className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {events.filter(e => e.isOwner).map((event) => (
+                    <AnimatedItem key={event._id}>
+                      <EventCard
+                        event={event}
+                        action="event"
+                        onClick={() => handleEventClick(event._id)}
+                        onDelete={handleDelete}
+                      />
+                    </AnimatedItem>
+                  ))}
+                </AnimatedList>
+              </section>
+            )}
+
+            {/* Assigned Events (Staff) */}
+            {events.some(e => !e.isOwner) && (
+              <section>
+                <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+                  Assigned to Me as Staff
+                  <Badge variant="secondary">{events.filter(e => !e.isOwner).length}</Badge>
+                </h2>
+                <AnimatedList className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {events.filter(e => !e.isOwner).map((event) => (
+                    <AnimatedItem key={event._id}>
+                      <EventCard
+                        event={event}
+                        action="event"
+                        onClick={() => handleEventClick(event._id)}
+                      />
+                    </AnimatedItem>
+                  ))}
+                </AnimatedList>
+              </section>
+            )}
+          </div>
         )}
       </div>
     </div>

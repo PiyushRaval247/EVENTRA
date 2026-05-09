@@ -24,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { CATEGORIES } from "@/lib/data";
 
 export default function OnboardingModal({ isOpen, onClose, onComplete }) {
@@ -167,55 +168,33 @@ export default function OnboardingModal({ isOpen, onClose, onComplete }) {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="state">State</Label>
-                  <Select
+                  <SearchableSelect
                     value={location.state}
                     onValueChange={(value) => {
                       setLocation({ ...location, state: value, city: "" });
                     }}
-                  >
-                    <SelectTrigger id="state" className="h-11 w-full">
-                      <SelectValue placeholder="Select state" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {indianStates.map((state) => (
-                        <SelectItem key={state.isoCode} value={state.name}>
-                          {state.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    placeholder="Select State"
+                    searchPlaceholder="Search state..."
+                    options={indianStates.map(s => ({ label: s.name, value: s.name }))}
+                    className="w-full h-11 px-4 rounded-xl bg-background border-purple-500/20 text-sm focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500/30 hover:bg-purple-50/50 shadow-sm transition-all"
+                    contentClassName="w-[300px]"
+                  />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="city">City</Label>
-                  <Select
+                  <SearchableSelect
                     value={location.city}
-                    onValueChange={(value) =>
-                      setLocation({ ...location, city: value })
-                    }
+                    onValueChange={(value) => {
+                      setLocation({ ...location, city: value });
+                    }}
+                    placeholder={location.state ? "Select City" : "State first"}
+                    searchPlaceholder="Search city..."
                     disabled={!location.state}
-                  >
-                    <SelectTrigger id="city" className="h-11 w-full">
-                      <SelectValue
-                        placeholder={
-                          location.state ? "Select city" : "State first"
-                        }
-                      />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {cities.length > 0 ? (
-                        cities.map((city) => (
-                          <SelectItem key={city.name} value={city.name}>
-                            {city.name}
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <SelectItem value="no-cities" disabled>
-                          No cities available
-                        </SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
+                    options={cities.map(c => ({ label: c.name, value: c.name }))}
+                    className="w-full h-11 px-4 rounded-xl bg-background border-purple-500/20 text-sm focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500/30 hover:bg-purple-50/50 shadow-sm transition-all disabled:opacity-50"
+                    contentClassName="w-[300px]"
+                  />
                 </div>
               </div>
 

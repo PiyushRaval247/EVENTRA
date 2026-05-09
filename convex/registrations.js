@@ -25,6 +25,8 @@ export const registerForEvent = mutation({
     eventId: v.id("events"),
     attendeeName: v.string(),
     attendeeEmail: v.string(),
+    tierName: v.optional(v.string()),
+    promoCode: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const user = await resolveCurrentUser(ctx);
@@ -35,9 +37,39 @@ export const registerForEvent = mutation({
       throw new Error("Event not found");
     }
 
-    // Check if event is full
-    if (event.registrationCount >= event.capacity) {
-      throw new Error("Event is full");
+    // Determine price and tier capacity
+    let finalPrice = event.ticketType === "free" ? 0 : (event.ticketPrice || 0);
+    let tierToUpdate = null;
+
+    if (args.tierName && event.ticketTiers) {
+      const tier = event.ticketTiers.find((t) => t.name === args.tierName);
+      if (!tier) throw new Error("Invalid ticket tier");
+      if (tier.registrationCount >= tier.capacity) {
+        throw new Error(`The ${args.tierName} tier is sold out`);
+      }
+      finalPrice = tier.price;
+      tierToUpdate = args.tierName;
+    } else {
+      // Global capacity check for single-tier events
+      if (event.registrationCount >= event.capacity) {
+        throw new Error("Event is full");
+      }
+    }
+
+    // Apply Promo Code
+    if (args.promoCode && event.promoCodes) {
+      const promo = event.promoCodes.find(
+        (p) =>
+          p.code.toUpperCase() === args.promoCode.toUpperCase() &&
+          (!p.expiresAt || p.expiresAt > Date.now())
+      );
+      if (promo) {
+        if (promo.discountType === "percentage") {
+          finalPrice = finalPrice * (1 - promo.discountValue / 100);
+        } else if (promo.discountType === "fixed") {
+          finalPrice = Math.max(0, finalPrice - promo.discountValue);
+        }
+      }
     }
 
     // Check if user already registered
@@ -59,19 +91,31 @@ export const registerForEvent = mutation({
       userId: user._id,
       attendeeName: args.attendeeName,
       attendeeEmail: args.attendeeEmail,
+      tierName: args.tierName,
+      pricePaid: finalPrice,
+      promoCodeUsed: args.promoCode,
       qrCode: qrCode,
       checkedIn: false,
       status: "confirmed",
       registeredAt: Date.now(),
     });
 
-    // Update event registration count
-    await ctx.db.patch(args.eventId, {
+    // Update registration counts
+    const updateData = {
       registrationCount: event.registrationCount + 1,
-    });
+    };
+
+    if (tierToUpdate) {
+      updateData.ticketTiers = event.ticketTiers.map((t) =>
+        t.name === tierToUpdate
+          ? { ...t, registrationCount: t.registrationCount + 1 }
+          : t
+      );
+    }
+
+    await ctx.db.patch(args.eventId, updateData);
 
     // Trigger email sending (asynchronously)
-    // We use internal.emails.sendTicketEmail to call the action
     await ctx.scheduler.runAfter(0, internal.emails.sendTicketEmail, {
       attendeeEmail: args.attendeeEmail,
       attendeeName: args.attendeeName,
@@ -159,11 +203,20 @@ export const cancelRegistration = mutation({
     });
 
     // Decrement event registration count
-    if (event.registrationCount > 0) {
-      await ctx.db.patch(registration.eventId, {
-        registrationCount: event.registrationCount - 1,
-      });
+    const updateData = {
+      registrationCount: Math.max(0, event.registrationCount - 1),
+    };
+
+    // If it was a multi-tier registration, decrement the tier count too
+    if (registration.tierName && event.ticketTiers) {
+      updateData.ticketTiers = event.ticketTiers.map((t) =>
+        t.name === registration.tierName
+          ? { ...t, registrationCount: Math.max(0, t.registrationCount - 1) }
+          : t
+      );
     }
+
+    await ctx.db.patch(registration.eventId, updateData);
 
     return { success: true };
   },
@@ -181,8 +234,15 @@ export const getEventRegistrations = query({
       throw new Error("Event not found");
     }
 
-    // Check if user is the organizer
-    if (event.organizerId !== user._id) {
+    // Check if user is the organizer or staff
+    const isStaff = await ctx.db
+      .query("staff")
+      .withIndex("by_event_email", (q) =>
+        q.eq("eventId", args.eventId).eq("email", user.email)
+      )
+      .unique();
+
+    if (event.organizerId !== user._id && !isStaff) {
       throw new Error("You are not authorized to view registrations");
     }
 
@@ -219,8 +279,17 @@ export const checkInAttendee = mutation({
       throw new Error("Event not found");
     }
 
-    // Check if user is the organizer
-    if (event.organizerId !== user._id) {
+    // Check if user is the organizer or staff with scanner role
+    const staffMember = await ctx.db
+      .query("staff")
+      .withIndex("by_event_email", (q) =>
+        q.eq("eventId", registration.eventId).eq("email", user.email)
+      )
+      .unique();
+
+    const canScan = event.organizerId === user._id || (staffMember && (staffMember.role === "scanner" || staffMember.role === "admin"));
+
+    if (!canScan) {
       throw new Error("You are not authorized to check in attendees");
     }
 

@@ -89,14 +89,7 @@ export default function ExplorePage() {
 
   return (
     <>
-      {/* Hero Title */}
-      <div className="pb-12 text-center">
-        <h1 className="text-5xl md:text-6xl font-bold mb-4">Discover Events</h1>
-        <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-          Explore featured events, find what&apos;s happening locally, or browse
-          events across India
-        </p>
-      </div>
+
 
       {/* Featured Carousel */}
       {featuredEvents && featuredEvents.length > 0 && (
@@ -215,7 +208,7 @@ export default function ExplorePage() {
               <CardContent className="px-3 sm:p-6 flex items-center gap-3">
                 <div className="text-3xl sm:text-4xl">{category.icon}</div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold mb-1 group-hover:text-purple-400 transition-colors">
+                  <h3 className="font-semibold mb-1 group-hover:text-purple-600 transition-colors">
                     {category.label}
                   </h3>
                   <p className="text-sm text-muted-foreground">

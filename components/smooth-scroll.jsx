@@ -1,9 +1,17 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, createContext, useContext, useRef, useState } from "react";
 import Lenis from "lenis";
 
+const LenisContext = createContext(null);
+
+export function useLenis() {
+  return useContext(LenisContext);
+}
+
 export default function SmoothScroll({ children }) {
+  const lenisRef = useRef(null);
+
   useEffect(() => {
     const lenis = new Lenis({
       duration: 1.2,
@@ -17,6 +25,11 @@ export default function SmoothScroll({ children }) {
       infinite: false,
     });
 
+    lenisRef.current = lenis;
+
+    // Expose lenis globally so modals can stop/start it
+    window.__lenis = lenis;
+
     function raf(time) {
       lenis.raf(time);
       requestAnimationFrame(raf);
@@ -26,6 +39,7 @@ export default function SmoothScroll({ children }) {
 
     return () => {
       lenis.destroy();
+      window.__lenis = null;
     };
   }, []);
 

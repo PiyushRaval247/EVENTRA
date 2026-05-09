@@ -19,6 +19,8 @@ import {
   Download,
   Search,
   Eye,
+  ShieldCheck,
+  Copy,
 } from "lucide-react";
 import { useConvexQuery, useConvexMutation } from "@/hooks/use-convex-query";
 import { api } from "@/convex/_generated/api";
@@ -38,33 +40,44 @@ import { getCategoryIcon, getCategoryLabel } from "@/lib/data";
 import QRScannerModal from "../_components/qr-scanner-modal";
 import { AttendeeCard } from "../_components/attendee-card";
 import { AnimatedList, AnimatedItem } from "@/components/animated-list";
+import StaffManagement from "./_components/staff-management";
+import { useUser, useAuth } from "@clerk/nextjs";
 
 export default function EventDashboardPage() {
+  const { isLoaded, isSignedIn } = useAuth();
+  const { user } = useUser();
   const params = useParams();
   const router = useRouter();
   const eventId = params.eventId;
 
   const [activeTab, setActiveTab] = useState("all");
+  const [managementTab, setManagementTab] = useState("attendees");
   const [searchQuery, setSearchQuery] = useState("");
   const [showQRScanner, setShowQRScanner] = useState(false);
 
   // Fetch event dashboard data
   const { data: dashboardData, isLoading } = useConvexQuery(
     api.dashboard.getEventDashboard,
-    { eventId }
+    !isLoaded || !isSignedIn ? "skip" : { eventId }
   );
 
   // Fetch registrations
   const { data: registrations, isLoading: loadingRegistrations } =
-    useConvexQuery(api.registrations.getEventRegistrations, { eventId });
+    useConvexQuery(
+      api.registrations.getEventRegistrations, 
+      !isLoaded || !isSignedIn ? "skip" : { eventId }
+    );
+    
   const { data: organizerReport } = useConvexQuery(
     api.reports.getOrganizerEventReport,
-    { eventId }
+    !isLoaded || !isSignedIn ? "skip" : { eventId }
   );
 
-  // Delete event mutation
   const { mutate: deleteEvent, isLoading: isDeleting } = useConvexMutation(
     api.dashboard.deleteEvent
+  );
+  const { mutate: cloneEvent, isLoading: isCloning } = useConvexMutation(
+    api.events.cloneEvent
   );
 
   const handleDelete = async () => {
@@ -80,6 +93,16 @@ export default function EventDashboardPage() {
       router.push("/my-events");
     } catch (error) {
       toast.error(error.message || "Failed to delete event");
+    }
+  };
+
+  const handleClone = async () => {
+    try {
+      const newEventId = await cloneEvent({ eventId });
+      toast.success("Event duplicated! Redirecting to new dashboard...");
+      router.push(`/my-events/${newEventId}`);
+    } catch (error) {
+      toast.error(error.message || "Failed to duplicate event");
     }
   };
 
@@ -109,11 +132,11 @@ export default function EventDashboardPage() {
     );
   }
 
-  if (!dashboardData) {
+  if (!dashboardData && isLoaded && isSignedIn) {
     notFound();
   }
 
-  const { event, stats } = dashboardData;
+  const { event, stats, isOwner } = dashboardData;
 
   // Filter registrations based on active tab and search
   const filteredRegistrations = registrations?.filter((reg) => {
@@ -191,6 +214,16 @@ export default function EventDashboardPage() {
             >
               <Eye className="w-4 h-4" />
               View
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleClone}
+              disabled={isCloning}
+              className="gap-2 flex-1"
+            >
+              <Copy className="w-4 h-4" />
+              {isCloning ? "Cloning..." : "Duplicate"}
             </Button>
             <Button
               variant="outline"
@@ -293,11 +326,25 @@ export default function EventDashboardPage() {
           </Card>
         </div>
 
-        {/* Attendee Management */}
-        <h2 className="text-2xl font-bold mb-4">Attendee Management</h2>
+        {/* Management Tabs */}
+        <Tabs value={managementTab} onValueChange={setManagementTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-8 max-w-[400px]">
+            <TabsTrigger value="attendees" className="gap-2">
+              <Users className="w-4 h-4" /> Attendees
+            </TabsTrigger>
+            {isOwner && (
+              <TabsTrigger value="staff" className="gap-2">
+                <ShieldCheck className="w-4 h-4" /> Staff
+              </TabsTrigger>
+            )}
+          </TabsList>
 
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsContent value="attendees">
+            {/* Attendee Management Title (Hidden when tabs are clear) */}
+            <h2 className="text-2xl font-bold mb-4">Attendee Management</h2>
+
+            {/* Tabs */}
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-4">
             <TabsTrigger value="all">
               All ({stats.totalRegistrations})
@@ -349,6 +396,15 @@ export default function EventDashboardPage() {
               </div>
             )}
           </TabsContent>
+        </Tabs>
+      </TabsContent>
+
+          {isOwner && (
+            <TabsContent value="staff">
+              <h2 className="text-2xl font-bold mb-4">Staff Management</h2>
+              <StaffManagement eventId={eventId} />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
 

@@ -190,7 +190,7 @@ export default function MyTicketsPage() {
                   <EventCard
                     event={registration.event}
                     action={null}
-                    className="opacity-60"
+                    className="grayscale opacity-80 hover:grayscale-0 hover:opacity-100 transition-all duration-500"
                   />
                 </AnimatedItem>
               ))}

@@ -1,7 +1,6 @@
 import { ClerkProvider } from "@clerk/nextjs";
 import Header from "@/components/header";
 import "./globals.css";
-import { dark } from "@clerk/themes";
 import { ThemeProvider } from "@/components/theme-provider";
 import Footer from "@/components/footer";
 import { ConvexClientProvider } from "@/components/convex-client-provider";
@@ -10,6 +9,13 @@ import ScrollProgress from "@/components/scroll-progress";
 import DynamicBackground from "@/components/dynamic-background";
 import SmoothScroll from "@/components/smooth-scroll";
 import CustomCursor from "@/components/cursor";
+import { Inter } from "next/font/google";
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
 
 export const metadata = {
   title: "EVENTRA - Delightful Events Start Here",
@@ -18,18 +24,19 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className="bg-linear-to-br from-gray-950 via-zinc-900 to-stone-900 text-white relative" suppressHydrationWarning={true}>
+    <html lang="en" suppressHydrationWarning className={inter.variable}>
+      <body className={`${inter.className} bg-background text-foreground relative`} suppressHydrationWarning={true}>
         <SmoothScroll>
           <ScrollProgress />
           <DynamicBackground />
           <ThemeProvider
             attribute="class"
-            defaultTheme="dark"
+            defaultTheme="light"
+            forcedTheme="light"
             enableSystem
             disableTransitionOnChange
           >
-            <ClerkProvider appearance={{ baseTheme: dark }}>
+            <ClerkProvider>
               <ConvexClientProvider>
                 <Header />
 
@@ -47,4 +54,3 @@ export default function RootLayout({ children }) {
     </html>
   );
 }
-
